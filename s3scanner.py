@@ -35,6 +35,8 @@ parser = argparse.ArgumentParser(description='#  s3scanner - Find S3 buckets and
 # Declare arguments
 parser.add_argument('-o', '--out-file', dest='outFile', default='./buckets.txt',
                     help='Name of file to save the successfully checked buckets in (Default: buckets.txt)')
+parser.add_argument('-t', '--output-type', dest='outType', default='checked-buckets', choices=['checked-buckets', 'simple', 'json'],
+                    help='Type of output data (Default: checked-buckets)')
 # parser.add_argument('-c', '--include-closed', dest='includeClosed', action='store_true', default=False,
 #                     help='Include found but closed buckets in the out-file')
 parser.add_argument('-d', '--dump', dest='dump', action='store_true', default=False,
@@ -50,15 +52,22 @@ parser.add_argument('buckets', help='Name of text file containing buckets to che
 args = parser.parse_args()
 
 # Create file logger
-flog = logging.getLogger('s3scanner-file')
-flog.setLevel(logging.DEBUG)              # Set log level for logger object
+if args.outType != "json":
+    flog = logging.getLogger('s3scanner-file')
+    flog.setLevel(logging.DEBUG)              # Set log level for logger object
 
-# Create file handler which logs even debug messages
-fh = logging.FileHandler(args.outFile)
-fh.setLevel(logging.DEBUG)
+    # Create file handler which logs even debug messages
+    fh = logging.FileHandler(args.outFile)
+    fh.setLevel(logging.DEBUG)
 
-# Add the handler to logger
-flog.addHandler(fh)
+    # Add the handler to logger
+    flog.addHandler(fh)
+else:
+    try:
+        flog = open(args.outFile, 'r+')
+    except FileNotFoundError:
+        flog = open(args.outFile, 'w+')
+        flog.write('[\n\n]')
 
 # Create secondary logger for logging to screen
 slog = logging.getLogger('s3scanner-screen')
@@ -92,7 +101,7 @@ if path.isfile(args.buckets):
     with open(args.buckets, 'r') as f:
         for line in f:
             line = line.rstrip()            # Remove any extra whitespace
-            s3.checkBucket(line, slog, flog, args.dump, args.list)
+            s3.checkBucket(line, slog, flog, args.dump, args.list, args.outType)
 else:
     # It's a single bucket
-    s3.checkBucket(args.buckets, slog, flog, args.dump, args.list)
+    s3.checkBucket(args.buckets, slog, flog, args.dump, args.list, args.outType)

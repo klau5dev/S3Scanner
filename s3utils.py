@@ -10,6 +10,7 @@ from botocore.handlers import disable_signing
 from botocore import UNSIGNED
 from botocore.client import Config
 import requests
+import json
 
 
 SIZE_CHECK_TIMEOUT = 30    # How long to wait for getBucketSize to return
@@ -89,7 +90,7 @@ def checkAwsCreds():
     return True
 
 
-def checkBucket(inBucket, slog, flog, argsDump, argsList):
+def checkBucket(inBucket, slog, flog, argsDump, argsList, argsType="checked-buckets"):
     # Determine what kind of input we're given. Options:
     #   bucket name                      i.e. mybucket
     #   domain name                      i.e. flaws.cloud
@@ -127,7 +128,30 @@ def checkBucket(inBucket, slog, flog, argsDump, argsList):
 
         message = "{0:>11} : {1}".format("[found]", bucket + " | " + str(size) + " | ACLs: " + str(b["acls"]))
         slog.info(message)
-        flog.debug(bucket)
+
+        if argsType == "checked-buckets":
+            flog.debug(bucket)
+        elif argsType == "simple":
+            flog.debug("{0} : {1}".format("[found]", bucket + " | " + str(size) + " | ACLs: " + str(b["acls"])))
+        elif argsType == "json":
+            json_log = json.dumps({
+                "status": "found",
+                "bucket": bucket,
+                "size": size,
+                "ACLs": b["acls"],
+                }, indent=4)
+
+            flog.seek(0, os.SEEK_END)
+
+            # if not first result
+            if(flog.tell() > 4):
+                json_log = ",\n" + json_log
+ 
+            json_log = json_log + "\n]"
+
+            flog.seek(flog.tell() - 2, os.SEEK_SET)
+            flog.write(json_log)
+            flog.flush()
 
         if argsDump:
             if size not in ["AccessDenied", "AllAccessDisabled"]:
