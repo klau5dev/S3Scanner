@@ -99,8 +99,8 @@ def checkBucket(inBucket, slog, flog, argsDump, argsList, argsType="checked-buck
     #   bucket:region                    i.e. flaws.cloud:us-west-2
     
     if ".amazonaws.com" in inBucket:    # We were given a full s3 url
-        if '/' in inBucket:
-            bucket = inBucket[inBucket.find("/")+1:]
+        if inBucket.rfind(".s3") == -1 and '/' in inBucket:
+            bucket = inBucket.split('/')[1]
         else:
             bucket = inBucket[:inBucket.rfind(".s3")]
     elif ":" in inBucket:               # We were given a bucket in 'bucket:region' format
